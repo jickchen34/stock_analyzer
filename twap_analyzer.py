@@ -6,9 +6,14 @@ import numpy as np
 from datetime import datetime
 
 class TwapAnalyzer:
-    def __init__(self, data: Dict, thresholds: Dict[str, float], debug=False):
-        # 从data['trade']提取交易数据 
+    def __init__(self, data: Dict, instrument=None, thresholds: Dict[str, float] = None, debug=False):
         trade_data = data.get('trade', [])
+        
+        # 如果指定了 instrument，只处理该标的的数据
+        if instrument:
+            ticker, exchange = instrument.split()
+            trade_data = [trade for trade in trade_data if trade['ticker'] == ticker]
+            
         self.data = sorted(trade_data, key=lambda x: int(x['timestamp'])) if trade_data else []
         self.trades_by_ticker = self._group_by_ticker()
         self.debug = debug
@@ -184,6 +189,7 @@ if __name__ == "__main__":
     parser.add_argument('--volume_cv', type=float, default=0.05, help='Threshold for volume coefficient of variation')
     parser.add_argument('--price_volatility', type=float, default=0.01, help='Threshold for price volatility')
     parser.add_argument('--price_trend', type=float, default=0.005, help='Threshold for price trend')
+    parser.add_argument('--instrument', type=str, help='指定要分析的标的，格式：股票代码 交易所，例如：600415 SSE')
     args = parser.parse_args()
 
     # 加载数据
@@ -200,7 +206,7 @@ if __name__ == "__main__":
     }
 
     # 分析TWAP
-    analyzer = TwapAnalyzer(data, thresholds=thresholds, debug=args.debug)
+    analyzer = TwapAnalyzer(data, args.instrument, thresholds=thresholds, debug=args.debug)
     results = analyzer.analyze(min_trades=args.min_trades)
 
     if args.debug:
